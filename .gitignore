@@ -21,3 +21,13 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Ignore environment variables
+.env
+
+# Ignore node_modules or any dependency folder
+node_modules/
+
+# Ignore log files
+*.log
+
