@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/EcoTrack/static/css/main.172d5ef7.css",
+    "main.js": "/EcoTrack/static/js/main.1fea5ac8.js",
+    "index.html": "/EcoTrack/index.html",
+    "main.172d5ef7.css.map": "/EcoTrack/static/css/main.172d5ef7.css.map",
+    "main.1fea5ac8.js.map": "/EcoTrack/static/js/main.1fea5ac8.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.172d5ef7.css",
+    "static/js/main.1fea5ac8.js"
+  ]
+}
