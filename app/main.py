@@ -20,6 +20,7 @@ import random
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import json
 import os
+import requests
 
 # Configure logging
 logging.basicConfig(
@@ -594,6 +595,136 @@ async def get_emissions_analytics(
     except Exception as e:
         logger.error(f"Error calculating emissions analytics: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to calculate emissions analytics")
+
+@app.post("/api/supplier-emission-prediction", response_model=schemas.SupplierEmissionPredictionResponse)
+async def predict_supplier_emissions(
+    prediction_data: schemas.SupplierEmissionPredictionRequest,
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Predict carbon footprint based on supplier emissions, transport distance, and industry type.
+    This endpoint integrates with your own AI model API.
+    """
+    try:
+        logger.info(f"Predicting emissions with data: {prediction_data}")
+        
+        # API key for the AI prediction model
+        api_key = "ZTNmPgCR8kaJk_HCie8IyPAG3pcyt6fnUH7DXk8u8u8"
+        
+        # In a real implementation, you would call your AI model API here
+        # Uncomment these lines and replace with your actual API endpoint
+        # response = requests.post('your-ai-prediction-api-endpoint.com/predict', json=prediction_data.dict())
+        # prediction_result = response.json()
+        
+        # Prepare payload for the AI model API
+        payload = {
+            "api_key": api_key,
+            "data": {
+                "supplier_emissions": prediction_data.supplierEmissions,
+                "transport_distance": prediction_data.transportDistance,
+                "industry_type": prediction_data.industryType
+            }
+        }
+        
+        try:
+            # Call the AI model API
+            response = requests.post(
+                'https://your-ai-prediction-api-endpoint.com/predict', 
+                json=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key}"
+                },
+                timeout=10
+            )
+            
+            # Check if the API call was successful
+            if response.status_code == 200:
+                result = response.json()
+                
+                # Process the API response
+                prediction_result = schemas.SupplierEmissionPredictionResponse(
+                    predictedEmissions=result.get("predicted_emissions", 0),
+                    confidenceLevel=result.get("confidence_level", 85),
+                    emissionComponents=schemas.EmissionComponent(
+                        baseEmissions=result.get("components", {}).get("base_emissions", prediction_data.supplierEmissions),
+                        transportEmissions=result.get("components", {}).get("transport_emissions", prediction_data.transportDistance * 0.2),
+                        industryFactor=result.get("components", {}).get("industry_factor", 1.5)
+                    ),
+                    reductionPotential=result.get("reduction_potential", 10),
+                    recommendations=result.get("recommendations", [
+                        "Optimize transport routes to reduce emissions",
+                        "Consider energy efficiency measures at supplier facilities",
+                        "Explore alternative suppliers with lower emission profiles"
+                    ])
+                )
+                
+                return prediction_result
+            else:
+                # If API call fails, fall back to the placeholder model
+                logger.warning(f"AI model API call failed with status {response.status_code}. Using fallback model.")
+                raise Exception(f"API call failed with status {response.status_code}")
+                
+        except Exception as api_error:
+            # Log the API call error
+            logger.warning(f"Error calling AI model API: {str(api_error)}. Using fallback model.")
+            
+            # Fall back to the placeholder model below
+        
+        # Industry emission factors (fallback if API call fails)
+        industry_factors = {
+            "manufacturing": 1.5,
+            "agriculture": 1.3,
+            "technology": 1.2,
+            "energy": 1.8,
+            "transportation": 1.7,
+            "retail": 1.1,
+            "construction": 1.6
+        }
+        
+        # Get industry factor, default to 1.4 if not found
+        industry_factor = industry_factors.get(prediction_data.industryType, 1.4)
+        
+        # Calculate transport emissions (basic formula)
+        transport_emissions = prediction_data.transportDistance * 0.2
+        
+        # Calculate total predicted emissions (placeholder logic)
+        base_emissions = prediction_data.supplierEmissions
+        predicted_emissions = (base_emissions * industry_factor) + transport_emissions
+        
+        # Generate recommendations based on industry and values
+        recommendations = []
+        if prediction_data.transportDistance > 1000:
+            recommendations.append("Consider local suppliers to reduce transport emissions")
+        
+        if industry_factor > 1.4:
+            recommendations.append("This industry has higher emission factors; consider supplier alternatives")
+        
+        recommendations.append("Implement energy efficiency measures at supplier facilities")
+        
+        # Create prediction response
+        prediction_result = schemas.SupplierEmissionPredictionResponse(
+            predictedEmissions=predicted_emissions,
+            confidenceLevel=87,  # Placeholder for AI model confidence
+            emissionComponents=schemas.EmissionComponent(
+                baseEmissions=base_emissions,
+                transportEmissions=transport_emissions,
+                industryFactor=industry_factor
+            ),
+            reductionPotential=12.5,  # Placeholder for AI-calculated reduction potential
+            recommendations=recommendations
+        )
+        
+        return prediction_result
+        
+    except Exception as e:
+        logger.error(f"Error predicting supplier emissions: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to predict emissions: {str(e)}"
+        )
 
 # Print all registered routes after they are defined
 logger.debug("Final registered routes:")

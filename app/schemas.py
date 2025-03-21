@@ -232,3 +232,27 @@ class EmissionsAnalyticsResponse(BaseModel):
     byType: List[dict]
     trend: List[dict]
     monthlyComparison: List[dict]
+
+# AI Supplier Emission Prediction Schemas
+class SupplierEmissionPredictionRequest(BaseModel):
+    supplierEmissions: float = Field(..., ge=0, description="Base supplier emissions in tCO2e")
+    transportDistance: float = Field(..., ge=0, description="Transport distance in kilometers")
+    industryType: str = Field(..., description="Type of industry")
+
+    @validator('supplierEmissions', 'transportDistance')
+    def validate_non_negative(cls, v):
+        if v < 0:
+            raise ValueError('Value cannot be negative')
+        return v
+
+class EmissionComponent(BaseModel):
+    baseEmissions: float
+    transportEmissions: float
+    industryFactor: float
+
+class SupplierEmissionPredictionResponse(BaseModel):
+    predictedEmissions: float
+    confidenceLevel: float
+    emissionComponents: EmissionComponent
+    reductionPotential: float
+    recommendations: List[str]

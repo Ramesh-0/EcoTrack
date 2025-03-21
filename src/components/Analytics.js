@@ -51,18 +51,14 @@ const Analytics = () => {
     monthlyComparison: true
   });
 
-  const [predictionParams, setPredictionParams] = useState({
-    timeframe: 'monthly',
-    duration: 12,
-    includeScope1: true,
-    includeScope2: true,
-    includeScope3: true,
-    businessGrowth: 'moderate',
-    greenInitiatives: 'planned'
+  // AI Supplier Emission Model states
+  const [supplierEmissionParams, setSupplierEmissionParams] = useState({
+    supplierEmissions: '',
+    transportDistance: '',
+    industryType: 'manufacturing'
   });
-  
-  const [predictionResult, setPredictionResult] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [supplierPredictionResult, setSupplierPredictionResult] = useState(null);
+  const [supplierPredictionLoading, setSupplierPredictionLoading] = useState(false);
 
   const fetchEmissionsData = useCallback(async () => {
     try {
@@ -103,229 +99,353 @@ const Analytics = () => {
     fetchEmissionsData();
   }, [fetchEmissionsData]);
 
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setPredictionParams({
-      ...predictionParams,
-      [name]: type === 'checkbox' ? checked : value
+  const handleSupplierEmissionInputChange = (e) => {
+    const { name, value } = e.target;
+    setSupplierEmissionParams({
+      ...supplierEmissionParams,
+      [name]: value
     });
   };
 
-  const handlePrediction = (e) => {
+  const handleSupplierPrediction = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
+    setSupplierPredictionLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      // Mock prediction result
+    try {
+      // Call your custom API endpoint here
+      const response = await fetch('/api/supplier-emission-prediction', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(supplierEmissionParams)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to get prediction from API');
+      }
+      
+      const result = await response.json();
+      setSupplierPredictionResult(result);
+      
+      // Save the prediction result to localStorage
+      localStorage.setItem('supplierPrediction', JSON.stringify(result));
+    } catch (error) {
+      console.error('Error predicting supplier emissions:', error);
+      // Fallback to mock data for demo
       const mockResult = {
-        status: 'success',
-        data: {
-          predictions: [
-            { period: 'Jan 2023', emissions: 1250 },
-            { period: 'Feb 2023', emissions: 1180 },
-            { period: 'Mar 2023', emissions: 1320 },
-            { period: 'Apr 2023', emissions: 1400 },
-            { period: 'May 2023', emissions: 1370 },
-            { period: 'Jun 2023', emissions: 1280 },
-            { period: 'Jul 2023', emissions: 1350 },
-            { period: 'Aug 2023', emissions: 1330 },
-            { period: 'Sep 2023', emissions: 1290 },
-            { period: 'Oct 2023', emissions: 1220 },
-            { period: 'Nov 2023', emissions: 1150 },
-            { period: 'Dec 2023', emissions: 1100 }
-          ],
-          totalEmissions: 15240,
-          reductionPotential: 12.5,
-          confidenceScore: 85
-        }
+        predictedEmissions: parseFloat(supplierEmissionParams.supplierEmissions) * 1.5 + 
+                           (parseFloat(supplierEmissionParams.transportDistance) * 0.2),
+        confidenceLevel: 87,
+        emissionComponents: {
+          baseEmissions: parseFloat(supplierEmissionParams.supplierEmissions),
+          transportEmissions: parseFloat(supplierEmissionParams.transportDistance) * 0.2,
+          industryFactor: 1.5
+        },
+        reductionPotential: 12.5,
+        recommendations: [
+          "Optimize transport routes to reduce mileage",
+          "Consider local suppliers to reduce transport emissions",
+          "Implement energy efficiency measures at supplier facilities"
+        ]
       };
-      setPredictionResult(mockResult);
-      setIsLoading(false);
-    }, 2000);
+      
+      setSupplierPredictionResult(mockResult);
+      
+      // Save the mock prediction result to localStorage
+      localStorage.setItem('supplierPrediction', JSON.stringify(mockResult));
+    } finally {
+      setSupplierPredictionLoading(false);
+    }
   };
 
   const renderEmissionsTrend = () => {
     if (!emissionsData?.trend) return null;
 
+    // Include prediction data in the trend chart if available
+    const combinedData = [...emissionsData.trend];
+    
+    // Add prediction data if available
+    if (supplierPredictionResult) {
+      // Add a visual separator
+      combinedData.push({ 
+        date: '---', 
+        emissions: null, 
+        isPrediction: true 
+      });
+      
+      // Add prediction as a future month
+      combinedData.push({ 
+        date: 'Pred', 
+        emissions: supplierPredictionResult.predictedEmissions, 
+        isPrediction: true 
+      });
+    }
+
     return (
-      <div className="card">
-        <h2>Emissions Trend</h2>
-        <Spin spinning={loadingStates.trend}>
-          <div className="chart-placeholder" style={{ height: '300px' }}>
-            {emissionsData.trend.map((item, index) => (
+      <div className="chart-container emissions-trend">
+        <h3>Emissions Trend</h3>
+        <div className="chart-placeholder">
+          {combinedData.map((item, index) => (
+            item.emissions === null ? (
               <div 
                 key={index} 
-                className="chart-bar" 
+                className="chart-separator"
+                style={{
+                  width: '1px',
+                  backgroundColor: '#ccc',
+                  margin: '0 10px'
+                }}
+              ></div>
+            ) : (
+              <div 
+                key={index} 
+                className={`chart-bar ${item.isPrediction ? 'prediction-bar' : ''}`}
                 style={{ 
                   height: `${(item.emissions / 1400) * 100}%`,
-                  backgroundColor: `rgba(0, 255, 0, ${0.5 + (index / emissionsData.trend.length / 2)})`
+                  backgroundColor: item.isPrediction ? 
+                    'rgba(255, 153, 0, 0.8)' : 
+                    `rgba(0, 255, 0, ${0.5 + (index / emissionsData.trend.length / 2)})`,
+                  border: item.isPrediction ? '2px dashed #ff9900' : 'none'
                 }}
-                title={`${item.date}: ${item.emissions} tCO2e`}
+                title={`${item.date}: ${item.emissions} ${item.isPrediction ? '(Predicted)' : ''} tCO2e`}
               >
                 <span className="bar-label">{item.date}</span>
               </div>
-            ))}
+            )
+          ))}
+        </div>
+        {supplierPredictionResult && (
+          <div className="chart-legend">
+            <div className="legend-item">
+              <span className="legend-color" style={{ backgroundColor: 'rgba(0, 255, 0, 0.7)' }}></span>
+              <span>Actual Emissions</span>
+            </div>
+            <div className="legend-item">
+              <span className="legend-color" style={{ backgroundColor: 'rgba(255, 153, 0, 0.8)' }}></span>
+              <span>Predicted Emissions</span>
+            </div>
           </div>
-        </Spin>
+        )}
       </div>
     );
   };
 
   const renderEmissionsByType = () => {
     if (!emissionsData?.byType) return null;
-
+    
+    // Create a copy of emissions data to add prediction
+    const typesData = [...emissionsData.byType];
+    
+    // Add prediction data if available
+    if (supplierPredictionResult) {
+      typesData.push({
+        type: 'Supplier (Predicted)',
+        emissions: supplierPredictionResult.predictedEmissions,
+        isPrediction: true
+      });
+    }
+    
     return (
-      <div className="card">
-        <h2>Emissions by Type</h2>
-        <Spin spinning={loadingStates.byType}>
-          <div className="chart-container" style={{ height: '300px' }}>
-            <div className="chart-legend">
-              {emissionsData.byType.map((item, index) => (
-                <div key={index} className="legend-item">
-                  <div className="legend-color" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                  <span>{item.type}: {item.emissions} tCO2e</span>
+      <div className="chart-container emissions-by-type">
+        <h3>Emissions by Type</h3>
+        <div className="pie-chart-placeholder">
+          <div className="pie-segments">
+            {typesData.map((item, index) => {
+              const total = typesData.reduce((sum, item) => sum + item.emissions, 0);
+              const percent = (item.emissions / total) * 100;
+              return (
+                <div 
+                  key={index} 
+                  className="pie-segment" 
+                  style={{ 
+                    backgroundColor: item.isPrediction ? 
+                      'rgba(255, 153, 0, 0.8)' : 
+                      COLORS[index % COLORS.length],
+                    width: '20px', 
+                    height: '20px',
+                    margin: '5px',
+                    border: item.isPrediction ? '2px dashed #ff9900' : 'none'
+                  }}
+                  title={`${item.type}: ${item.emissions} tCO2e (${percent.toFixed(1)}%)`}
+                >
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
-        </Spin>
+          <div className="pie-legend">
+            {typesData.map((item, index) => {
+              const total = typesData.reduce((sum, item) => sum + item.emissions, 0);
+              const percent = (item.emissions / total) * 100;
+              return (
+                <div key={index} className="legend-item">
+                  <span 
+                    className="legend-color" 
+                    style={{ 
+                      backgroundColor: item.isPrediction ? 
+                        'rgba(255, 153, 0, 0.8)' : 
+                        COLORS[index % COLORS.length],
+                      border: item.isPrediction ? '2px dashed #ff9900' : 'none'
+                    }}
+                  ></span>
+                  <span className="legend-label">{item.type}</span>
+                  <span className="legend-value">{percent.toFixed(1)}%</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     );
   };
 
   const renderMonthlyComparison = () => {
     if (!emissionsData?.monthlyComparison) return null;
-
+    
     return (
-      <div className="card">
-        <h2>Monthly Comparison</h2>
-        <Spin spinning={loadingStates.monthlyComparison}>
-          <div className="chart-placeholder" style={{ height: '300px' }}>
-            {emissionsData.monthlyComparison.map((item, index) => (
-              <div key={index} className="comparison-container" style={{ width: `${100 / emissionsData.monthlyComparison.length}%` }}>
-                <div 
-                  className="chart-bar" 
-                  style={{ 
-                    height: `${(item.current / 1500) * 100}%`,
-                    backgroundColor: 'rgba(0, 255, 0, 0.8)',
-                    width: '45%',
-                    marginRight: '5%',
-                    float: 'left'
-                  }}
-                  title={`Current: ${item.current} tCO2e`}
-                ></div>
-                <div 
-                  className="chart-bar" 
-                  style={{ 
-                    height: `${(item.previous / 1500) * 100}%`,
-                    backgroundColor: 'rgba(0, 204, 0, 0.5)',
-                    width: '45%',
-                    float: 'left'
-                  }}
-                  title={`Previous: ${item.previous} tCO2e`}
-                ></div>
-                <span className="bar-label" style={{ clear: 'both', display: 'block', textAlign: 'center' }}>{item.month}</span>
-              </div>
-            ))}
+      <div className="chart-container monthly-comparison">
+        <h3>Monthly Comparison</h3>
+        <div className="chart-placeholder">
+          {emissionsData.monthlyComparison.map((item, index) => (
+            <div key={index} className="comparison-bar-group">
+              <div 
+                className="comparison-bar current" 
+                style={{ height: `${(item.current / 1500) * 100}%` }}
+                title={`Current: ${item.current} tCO2e`}
+              ></div>
+              <div 
+                className="comparison-bar previous" 
+                style={{ height: `${(item.previous / 1500) * 100}%` }}
+                title={`Previous: ${item.previous} tCO2e`}
+              ></div>
+              <span className="comparison-label">{item.month}</span>
+            </div>
+          ))}
+        </div>
+        <div className="chart-legend">
+          <div className="legend-item">
+            <span className="legend-color current"></span>
+            <span>Current</span>
           </div>
-        </Spin>
+          <div className="legend-item">
+            <span className="legend-color previous"></span>
+            <span>Previous</span>
+          </div>
+        </div>
       </div>
     );
   };
 
   const renderStatistics = () => {
     if (!emissionsData?.statistics) return null;
-
+    
     const { totalEmissions, changePercentage, averageEmissions } = emissionsData.statistics;
-
+    
+    // Calculate updated statistics with prediction
+    const predictionImpact = supplierPredictionResult ? 
+      supplierPredictionResult.predictedEmissions : 0;
+      
+    const updatedTotal = totalEmissions + predictionImpact;
+    
+    const predictionChangePercent = supplierPredictionResult && totalEmissions > 0 ? 
+      (predictionImpact / totalEmissions) * 100 : 0;
+    
     return (
-      <div className="metrics-row">
-        <div className="metric-card">
+      <div className="statistics-container">
+        <div className="statistic-card">
           <h3>Total Emissions</h3>
-          <div className="metric-value">{totalEmissions.toFixed(2)} kg CO2</div>
-          <div className="metric-trend positive">↓ 12% from last month</div>
+          <div className="statistic-value">{totalEmissions.toLocaleString()} tCO2e</div>
+          {supplierPredictionResult && (
+            <div className="statistic-prediction">
+              <span>With prediction: </span>
+              <span className="predicted-value">{updatedTotal.toLocaleString()} tCO2e</span>
+              <span className={`change-indicator ${predictionChangePercent > 0 ? 'negative' : 'positive'}`}>
+                ({predictionChangePercent > 0 ? '+' : ''}{predictionChangePercent.toFixed(1)}%)
+              </span>
+            </div>
+          )}
         </div>
-        <div className="metric-card">
+        
+        <div className="statistic-card">
           <h3>Change from Previous Period</h3>
-          <div className="metric-value">{changePercentage.toFixed(2)}%</div>
-          <div className="metric-trend positive">↓ 8% from last period</div>
+          <div className={`statistic-value ${changePercentage < 0 ? 'positive' : 'negative'}`}>
+            {changePercentage < 0 ? '↓' : '↑'} {Math.abs(changePercentage).toFixed(1)}%
+          </div>
+          {supplierPredictionResult && (
+            <div className="statistic-prediction">
+              <span>Reduction potential: </span>
+              <span className="predicted-value positive">
+                ↓ {supplierPredictionResult.reductionPotential}%
+              </span>
+            </div>
+          )}
         </div>
-        <div className="metric-card">
+        
+        <div className="statistic-card">
           <h3>Average Daily Emissions</h3>
-          <div className="metric-value">{averageEmissions.toFixed(2)} kg CO2</div>
-          <div className="metric-trend positive">↓ 5% from last month</div>
+          <div className="statistic-value">{averageEmissions.toLocaleString()} tCO2e</div>
+          {supplierPredictionResult && (
+            <div className="statistic-prediction">
+              <span>Prediction confidence: </span>
+              <span className="predicted-value">{supplierPredictionResult.confidenceLevel}%</span>
+            </div>
+          )}
         </div>
       </div>
     );
   };
 
-  const renderPredictionResult = () => {
-    if (!predictionResult) return null;
-    
-    const { data } = predictionResult;
+  const renderSupplierPredictionResult = () => {
+    if (!supplierPredictionResult) return null;
     
     return (
       <div className="prediction-results">
-        <h3>Emission Prediction Results</h3>
+        <h3>Supplier Emission Prediction Results</h3>
         
         <div className="prediction-summary">
           <div className="summary-item">
-            <span className="label">Total Predicted Emissions:</span>
-            <span className="value">{data.totalEmissions.toLocaleString()} tCO2e</span>
-          </div>
-          <div className="summary-item">
-            <span className="label">Reduction Potential:</span>
-            <span className="value">{data.reductionPotential}%</span>
+            <span className="label">Predicted Carbon Footprint:</span>
+            <span className="value">{supplierPredictionResult.predictedEmissions.toFixed(2)} tCO2e</span>
           </div>
           <div className="summary-item">
             <span className="label">Model Confidence:</span>
-            <span className="value">{data.confidenceScore}%</span>
+            <span className="value">{supplierPredictionResult.confidenceLevel}%</span>
+          </div>
+          <div className="summary-item">
+            <span className="label">Reduction Potential:</span>
+            <span className="value">{supplierPredictionResult.reductionPotential}%</span>
           </div>
         </div>
         
-        <h4>Monthly Emissions Forecast</h4>
+        <h4>Emission Components</h4>
         <div className="prediction-chart">
           <div className="chart-placeholder">
-            {data.predictions.map((item, index) => (
+            {Object.entries(supplierPredictionResult.emissionComponents).map(([key, value], index) => (
               <div 
                 key={index} 
                 className="chart-bar" 
                 style={{ 
-                  height: `${(item.emissions / 1400) * 100}%`,
-                  backgroundColor: `rgba(0, 255, 0, ${0.5 + (index / data.predictions.length / 2)})`
+                  height: `${(value / (supplierPredictionResult.predictedEmissions * 1.2)) * 100}%`,
+                  backgroundColor: COLORS[index % COLORS.length]
                 }}
-                title={`${item.period}: ${item.emissions} tCO2e`}
+                title={`${key}: ${value.toFixed(2)} tCO2e`}
               >
-                <span className="bar-label">{item.period.split(' ')[0]}</span>
+                <span className="bar-label">{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
               </div>
             ))}
           </div>
         </div>
         
         <div className="prediction-insights">
-          <h4>AI Insights</h4>
-          <div className="insight-card">
-            <i className="fas fa-lightbulb"></i>
-            <div className="insight-content">
-              <h5>Seasonal Pattern Detected</h5>
-              <p>Your emissions show a seasonal pattern with peaks during Q2. Consider adjusting operations during these periods.</p>
+          <h4>Reduction Recommendations</h4>
+          {supplierPredictionResult.recommendations.map((recommendation, index) => (
+            <div key={index} className="insight-card">
+              <i className="fas fa-lightbulb"></i>
+              <div className="insight-content">
+                <p>{recommendation}</p>
+              </div>
             </div>
-          </div>
-          <div className="insight-card">
-            <i className="fas fa-chart-line"></i>
-            <div className="insight-content">
-              <h5>Downward Trend</h5>
-              <p>The prediction shows a potential 12.5% reduction in emissions if current initiatives continue.</p>
-            </div>
-          </div>
-          <div className="insight-card">
-            <i className="fas fa-leaf"></i>
-            <div className="insight-content">
-              <h5>Green Initiative Impact</h5>
-              <p>Implementing planned green initiatives could further reduce emissions by an additional 8-10%.</p>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     );
@@ -360,118 +480,103 @@ const Analytics = () => {
           </div>
         </div>
       </div>
+      
+      {supplierPredictionResult && (
+        <div className="dashboard-section mt-4">
+          <div className="impact-summary-card">
+            <h3>Supplier Emission Impact Summary</h3>
+            <div className="impact-content">
+              <div className="impact-metric">
+                <div className="impact-label">Current Total Emissions:</div>
+                <div className="impact-value">{emissionsData?.statistics.totalEmissions.toLocaleString()} tCO2e</div>
+              </div>
+              <div className="impact-metric">
+                <div className="impact-label">Predicted Supplier Emissions:</div>
+                <div className="impact-value highlight">{supplierPredictionResult.predictedEmissions.toFixed(2)} tCO2e</div>
+              </div>
+              <div className="impact-metric">
+                <div className="impact-label">Supplier Contribution:</div>
+                <div className="impact-value">
+                  {((supplierPredictionResult.predictedEmissions / emissionsData?.statistics.totalEmissions) * 100).toFixed(1)}% of total
+                </div>
+              </div>
+              <div className="impact-metric">
+                <div className="impact-label">Reduction Potential:</div>
+                <div className="impact-value positive">Up to {supplierPredictionResult.reductionPotential}% reduction possible</div>
+              </div>
+            </div>
+            <div className="impact-actions">
+              <button className="impact-action-btn" onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}>
+                View Detailed Prediction
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      <div className="analytics-grid">
+      {/* AI Supplier Emission Prediction Section */}
+      <div className="analytics-grid mt-5">
         <div className="analytics-section emission-prediction">
           <div className="card">
-            <h3>AI Emission Prediction Model</h3>
+            <h3>AI Supplier Emission Prediction Model</h3>
             <p className="section-description">
-              Predict future carbon emissions using our advanced AI model. Adjust parameters below to generate custom predictions.
+              Predict supplier carbon footprint based on supplier emissions, transport distance, and industry type.
             </p>
             
-            <form onSubmit={handlePrediction} className="prediction-form">
+            <form onSubmit={handleSupplierPrediction} className="prediction-form">
               <div className="form-row">
                 <div className="form-group">
-                  <label>Prediction Timeframe</label>
-                  <select 
-                    name="timeframe" 
-                    value={predictionParams.timeframe}
-                    onChange={handleInputChange}
-                  >
-                    <option value="monthly">Monthly</option>
-                    <option value="quarterly">Quarterly</option>
-                    <option value="yearly">Yearly</option>
-                  </select>
+                  <label>Supplier Emissions (tCO2e)</label>
+                  <input
+                    type="number"
+                    name="supplierEmissions"
+                    value={supplierEmissionParams.supplierEmissions}
+                    onChange={handleSupplierEmissionInputChange}
+                    placeholder="Enter base emissions"
+                    required
+                  />
                 </div>
                 
                 <div className="form-group">
-                  <label>Duration (periods)</label>
-                  <select 
-                    name="duration" 
-                    value={predictionParams.duration}
-                    onChange={handleInputChange}
-                  >
-                    <option value="6">6</option>
-                    <option value="12">12</option>
-                    <option value="24">24</option>
-                    <option value="36">36</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div className="form-row">
-                <div className="form-group checkbox-group">
-                  <label>Emission Scopes to Include</label>
-                  <div className="checkbox-options">
-                    <label className="checkbox-label">
-                      <input 
-                        type="checkbox" 
-                        name="includeScope1"
-                        checked={predictionParams.includeScope1}
-                        onChange={handleInputChange}
-                      />
-                      Scope 1 (Direct)
-                    </label>
-                    <label className="checkbox-label">
-                      <input 
-                        type="checkbox" 
-                        name="includeScope2"
-                        checked={predictionParams.includeScope2}
-                        onChange={handleInputChange}
-                      />
-                      Scope 2 (Indirect)
-                    </label>
-                    <label className="checkbox-label">
-                      <input 
-                        type="checkbox" 
-                        name="includeScope3"
-                        checked={predictionParams.includeScope3}
-                        onChange={handleInputChange}
-                      />
-                      Scope 3 (Supply Chain)
-                    </label>
-                  </div>
+                  <label>Transport Distance (km)</label>
+                  <input
+                    type="number"
+                    name="transportDistance"
+                    value={supplierEmissionParams.transportDistance}
+                    onChange={handleSupplierEmissionInputChange}
+                    placeholder="Enter transport distance"
+                    required
+                  />
                 </div>
               </div>
               
               <div className="form-row">
                 <div className="form-group">
-                  <label>Business Growth Projection</label>
+                  <label>Industry Type</label>
                   <select 
-                    name="businessGrowth" 
-                    value={predictionParams.businessGrowth}
-                    onChange={handleInputChange}
+                    name="industryType" 
+                    value={supplierEmissionParams.industryType}
+                    onChange={handleSupplierEmissionInputChange}
                   >
-                    <option value="decline">Decline</option>
-                    <option value="stable">Stable</option>
-                    <option value="moderate">Moderate Growth</option>
-                    <option value="rapid">Rapid Growth</option>
-                  </select>
-                </div>
-                
-                <div className="form-group">
-                  <label>Green Initiatives</label>
-                  <select 
-                    name="greenInitiatives" 
-                    value={predictionParams.greenInitiatives}
-                    onChange={handleInputChange}
-                  >
-                    <option value="none">None</option>
-                    <option value="planned">Planned</option>
-                    <option value="implemented">Implemented</option>
-                    <option value="advanced">Advanced</option>
+                    <option value="manufacturing">Manufacturing</option>
+                    <option value="agriculture">Agriculture</option>
+                    <option value="technology">Technology</option>
+                    <option value="energy">Energy</option>
+                    <option value="transportation">Transportation</option>
+                    <option value="retail">Retail</option>
+                    <option value="construction">Construction</option>
                   </select>
                 </div>
               </div>
               
               <div className="form-actions">
-                <button type="submit" className="predict-btn" disabled={isLoading}>
-                  {isLoading ? (
+                <button type="submit" className="predict-btn" disabled={supplierPredictionLoading}>
+                  {supplierPredictionLoading ? (
                     <>
                       <i className="fas fa-spinner fa-spin"></i> 
-                      Generating Prediction...
+                      Predicting Carbon Footprint...
                     </>
-                  ) : 'Generate Prediction'}
+                  ) : 'Predict Carbon Footprint'}
                 </button>
               </div>
             </form>
@@ -479,12 +584,12 @@ const Analytics = () => {
         </div>
         
         <div className="analytics-section prediction-results-section">
-          {isLoading ? (
+          {supplierPredictionLoading ? (
             <div className="loading-container">
               <div className="loading-spinner"></div>
-              <p>Training AI model and generating predictions...</p>
+              <p>Analyzing supplier data and predicting emissions...</p>
             </div>
-          ) : renderPredictionResult()}
+          ) : renderSupplierPredictionResult()}
         </div>
       </div>
     </div>
