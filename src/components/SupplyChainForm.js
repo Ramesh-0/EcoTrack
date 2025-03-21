@@ -50,41 +50,117 @@ const SupplyChainForm = ({ onSuccess }) => {
   };
 
   const onFinish = async (values) => {
-    setLoading(true);
-    setError(null);
     try {
-      // Format the data before sending
+      setLoading(true);
+      setError(null);
+      
+      // Format the data for the API
       const formattedData = {
-        supplier_name: values.supplierName,
-        date: values.date.format('YYYY-MM-DD'),
+        ...values,
+        date: values.date ? values.date.toISOString() : new Date().toISOString(),
         materials: values.materials.map(material => ({
-          material_type: material.materialType,
-          quantity: material.quantity,
-          transportation_type: material.transportationType,
-          transportation_distance: material.transportationDistance,
-          transportation_date: material.transportationDate.format('YYYY-MM-DD'),
-          notes: material.notes || ''
+          ...material,
+          transportation_distance: parseFloat(material.transportation_distance),
+          quantity: parseFloat(material.quantity)
         }))
       };
-
-      await api.post('/supply-chain', formattedData);
+      
+      const response = await api.post('/supply-chain', formattedData);
+      
+      // Success message and form reset
       message.success('Supply chain record added successfully');
       form.resetFields();
+      
+      // Calculate the emissions for this entry and save to localStorage
+      const entryEmissions = calculateEntryEmissions(formattedData);
+      saveSupplyChainDataToLocalStorage(formattedData, entryEmissions);
+      
+      // Call any onSuccess callback if provided
       if (onSuccess) {
-        onSuccess();
+        onSuccess(response.data);
       }
     } catch (err) {
       console.error('Error submitting supply chain data:', err);
-      
-      if (err.response?.data?.detail) {
-        const formattedError = formatError(err.response.data.detail);
-        setError(formattedError);
-      } else {
-        setError('Failed to submit supply chain data. Please try again.');
-      }
+      setError(err.response?.data?.detail || err.message || 'Failed to submit supply chain data');
       message.error('Failed to submit supply chain data');
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Calculate emissions for a supply chain entry
+  const calculateEntryEmissions = (data) => {
+    let totalEmissions = 0;
+    
+    // Calculate emissions for each material in the entry
+    data.materials.forEach(material => {
+      // Simple emission calculation based on material quantity and transportation distance
+      // Adjust these factors based on your actual emission calculation methodology
+      const transportationEmissions = material.transportation_distance * 0.01; // Example: 0.01 CO2e per km
+      const materialEmissions = material.quantity * 0.1; // Example: 0.1 CO2e per unit
+      
+      totalEmissions += transportationEmissions + materialEmissions;
+    });
+    
+    return totalEmissions;
+  };
+  
+  // Save supply chain data to localStorage for dashboard integration
+  const saveSupplyChainDataToLocalStorage = (data, emissions) => {
+    try {
+      // Get existing data from localStorage
+      const existingDataString = localStorage.getItem('supplyChainData');
+      let existingData = [];
+      
+      if (existingDataString) {
+        existingData = JSON.parse(existingDataString);
+      }
+      
+      // Add new entry
+      const newEntry = {
+        ...data,
+        emissions: emissions,
+        id: Date.now() // Using timestamp as a simple unique ID
+      };
+      
+      // Add to the array and save back to localStorage
+      existingData.push(newEntry);
+      localStorage.setItem('supplyChainData', JSON.stringify(existingData));
+      
+      // Also update aggregate emissions by month for easy dashboard access
+      updateMonthlyEmissions(data.date, emissions);
+      
+    } catch (error) {
+      console.error('Error saving supply chain data to localStorage:', error);
+    }
+  };
+  
+  // Update the monthly emissions aggregation in localStorage
+  const updateMonthlyEmissions = (dateString, emissions) => {
+    try {
+      const date = new Date(dateString);
+      const month = date.toLocaleDateString('en-US', { month: 'short' });
+      
+      // Get existing monthly data
+      const monthlyDataString = localStorage.getItem('supplyChainMonthlyEmissions');
+      let monthlyData = {};
+      
+      if (monthlyDataString) {
+        monthlyData = JSON.parse(monthlyDataString);
+      }
+      
+      // Update the emissions for this month
+      if (monthlyData[month]) {
+        monthlyData[month] += emissions;
+      } else {
+        monthlyData[month] = emissions;
+      }
+      
+      // Save back to localStorage
+      localStorage.setItem('supplyChainMonthlyEmissions', JSON.stringify(monthlyData));
+      
+    } catch (error) {
+      console.error('Error updating monthly emissions in localStorage:', error);
     }
   };
 

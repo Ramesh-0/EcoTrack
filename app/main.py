@@ -22,6 +22,9 @@ import json
 import os
 import requests
 
+# Import AI prediction router
+from app.ai_routes import router as ai_router
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -46,6 +49,9 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"]
 )
+
+# Include AI router
+app.include_router(ai_router)
 
 logger.debug("Registering routes...")
 
@@ -143,53 +149,18 @@ def test_db(db: Session = Depends(get_db)):
 def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
     logger.debug(f"Signup endpoint called with username: {user.username}")
     try:
-        # Check if user already exists
-        db_user = db.query(models.User).filter(
-            (models.User.email == user.email) | 
-            (models.User.username == user.username)
-        ).first()
-        
-        if db_user:
-            raise HTTPException(
-                status_code=400,
-                detail="Email or username already registered"
-            )
-        
-        # Check if passwords match
-        if user.password != user.confirm_password:
-            raise HTTPException(
-                status_code=400,
-                detail="Passwords do not match"
-            )
-        
-        # Create new user
-        new_user = models.User(
-            username=user.username,
-            email=user.email,
-            is_active=True,
-            is_superuser=False
-        )
-        new_user.set_password(user.password)
-        
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-        
+        # Create user using CRUD function
+        new_user = crud.create_user(db, user)
         logger.info(f"User created successfully: {new_user.username}")
-        return {
-            "id": new_user.id,
-            "username": new_user.username,
-            "email": new_user.email,
-            "is_active": new_user.is_active,
-            "created_at": new_user.created_at,
-            "company_id": new_user.company_id
-        }
+        return new_user
         
-    except HTTPException as he:
-        raise he
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=400,
+            detail=str(ve)
+        )
     except Exception as e:
         logger.error(f"Error in signup: {str(e)}\n{traceback.format_exc()}")
-        db.rollback()
         raise HTTPException(
             status_code=500,
             detail=f"Error creating user: {str(e)}"
@@ -197,18 +168,73 @@ def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @app.post("/token", response_model=schemas.Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db = Depends(get_db)):
+    logger.debug(f"Login attempt for user: {form_data.username}")
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
+        logger.warning(f"Failed login attempt for user: {form_data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    
+    # Create user response object
+    user_response = {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "is_active": user.is_active,
+        "created_at": user.created_at,
+        "company_id": user.company_id
+    }
+    
+    logger.info(f"User {user.username} logged in successfully")
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer", 
+        "user": user_response,
+        "redirect_url": "/dashboard"
+    }
+
+@app.post("/auth/login", response_model=schemas.Token)
+async def login(user_data: schemas.UserLogin, db: Session = Depends(get_db)):
+    logger.debug(f"Login attempt with email: {user_data.email}")
+    user = authenticate_user(db, user_data.email, user_data.password)
+    if not user:
+        logger.warning(f"Failed login attempt with email: {user_data.email}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    
+    # Create user response object
+    user_response = {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "is_active": user.is_active,
+        "created_at": user.created_at,
+        "company_id": user.company_id
+    }
+    
+    logger.info(f"User {user.username} logged in successfully")
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer", 
+        "user": user_response,
+        "redirect_url": "/dashboard"
+    }
 
 @app.get("/dashboard", response_model=schemas.DashboardResponse)
 async def get_dashboard(current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
@@ -724,6 +750,42 @@ async def predict_supplier_emissions(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to predict emissions: {str(e)}"
+        )
+
+@app.get("/auth/me", response_model=schemas.UserResponse)
+async def get_user_profile(current_user: models.User = Depends(get_current_active_user)):
+    """
+    Get the current user's profile.
+    This endpoint requires authentication.
+    """
+    logger.debug(f"User profile requested by: {current_user.username}")
+    return current_user
+
+@app.put("/auth/me", response_model=schemas.UserResponse)
+async def update_user_profile(
+    user_data: schemas.UserUpdate, 
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update the current user's profile.
+    This endpoint requires authentication.
+    """
+    logger.debug(f"Profile update requested by: {current_user.username}")
+    try:
+        updated_user = crud.update_user(db, current_user.id, user_data, current_user.id)
+        logger.info(f"User {current_user.username} updated their profile")
+        return updated_user
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=400,
+            detail=str(ve)
+        )
+    except Exception as e:
+        logger.error(f"Error updating user profile: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error updating profile: {str(e)}"
         )
 
 # Print all registered routes after they are defined

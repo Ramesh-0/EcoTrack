@@ -1974,12 +1974,12 @@ body {
 }
 
 .prediction-notes {
-  padding: 10px 20px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  border-top: 1px solid var(--border-color);
-  margin-top: 10px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 15px;
+  margin-top: 15px;
+  border-top: 1px solid #333333;
 }
 
 .prediction-note {
@@ -2001,6 +2001,99 @@ body {
 @media (max-width: 768px) {
   .prediction-notes {
     flex-direction: column;
-    gap: 8px;
   }
+}
+
+/* Supply Chain Impact Styles */
+.supply-chain-impact {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #00aaff;
+  padding: 5px 10px;
+  background-color: rgba(0, 170, 255, 0.1);
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.supply-chain-value {
+  font-weight: 600;
+  color: #00aaff;
+}
+
+/* Supply Chain Emissions Detail Styles */
+.supply-chain-emissions-detail {
+  padding: 20px;
+}
+
+.supply-chain-emissions-detail .filters-card {
+  margin-bottom: 20px;
+}
+
+.supply-chain-emissions-detail .stats-row {
+  margin-bottom: 20px;
+}
+
+.supply-chain-emissions-detail .chart-row {
+  margin-bottom: 20px;
+}
+
+.supply-chain-emissions-detail .table-card {
+  margin-bottom: 20px;
+}
+
+.supply-chain-emissions-detail label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 500;
+  color: #a0a0a0;
+}
+
+.supply-chain-emissions-detail .ant-card {
+  background-color: #2a2a2a;
+  border: 1px solid #333333;
+  border-radius: 8px;
+}
+
+.supply-chain-emissions-detail .ant-card-head {
+  border-bottom: 1px solid #333333;
+}
+
+.supply-chain-emissions-detail .ant-table {
+  background-color: #2a2a2a;
+  color: #ffffff;
+}
+
+.supply-chain-emissions-detail .ant-table-thead > tr > th {
+  background-color: #1a1a1a;
+  color: #ffffff;
+  border-bottom: 1px solid #333333;
+}
+
+.supply-chain-emissions-detail .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #333333;
+}
+
+.supply-chain-emissions-detail .ant-table-tbody > tr:hover > td {
+  background-color: rgba(0, 170, 255, 0.1);
+}
+
+.supply-chain-emissions-detail .ant-empty {
+  color: #a0a0a0;
+}
+
+.supply-chain-emissions-detail .ant-statistic-title {
+  color: #a0a0a0;
+}
+
+.supply-chain-emissions-detail .ant-statistic-content {
+  color: #ffffff;
+}
+
+/* View Details Button for Dashboard */
+.view-details-button {
+  margin-top: 16px;
+  display: block;
+  width: 100%;
 }

@@ -43,15 +43,34 @@ services:
       - ACCESS_TOKEN_EXPIRE_MINUTES=30
       - DEBUG=True
       - ENVIRONMENT=development
+      - MODEL_API_URL=http://model-service:8000/predict
     ports:
       - "8000:8000"
     depends_on:
       - postgres
+      - model-service
     volumes:
       - .:/app
     networks:
       - carbon-network
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  model-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.model
+    container_name: carbon-footprint-model-service
+    restart: always
+    environment:
+      - DEBUG=True
+      - ENVIRONMENT=development
+    ports:
+      - "8001:8000"
+    volumes:
+      - .:/app
+    networks:
+      - carbon-network
+    command: python model_service.py
 
 networks:
   carbon-network:

@@ -1,7 +1,21 @@
 from pydantic import BaseModel, Field, validator, EmailStr
 from typing import Optional, List
 from datetime import datetime, date
-from .models import TransportationType, MaterialType
+from enum import Enum, auto
+
+# Enum definitions
+class TransportationType(str, Enum):
+    ROAD = "road"
+    RAIL = "rail"
+    AIR = "air"
+    SEA = "sea"
+    
+class MaterialType(str, Enum):
+    RAW_MATERIALS = "raw_materials"
+    PROCESSED_MATERIALS = "processed_materials"
+    COMPONENTS = "components"
+    PACKAGING = "packaging"
+    FINISHED_GOODS = "finished_goods"
 
 # Company Schema
 class CompanyBase(BaseModel):
@@ -106,6 +120,13 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
     confirm_password: str
+
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+    current_password: Optional[str] = None
+    new_password: Optional[str] = None
+    confirm_new_password: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -256,3 +277,44 @@ class SupplierEmissionPredictionResponse(BaseModel):
     emissionComponents: EmissionComponent
     reductionPotential: float
     recommendations: List[str]
+
+# AI Prediction Schemas
+class AIPredictionInput(BaseModel):
+    company_id: Optional[int] = None
+    input_data: dict
+    prediction_type: str = Field(..., description="Type of prediction (scope1, scope2, scope3, total)")
+
+class AIPredictionCreate(AIPredictionInput):
+    user_id: int
+
+class AIPredictionResponse(BaseModel):
+    id: int
+    company_id: Optional[int] = None
+    user_id: int
+    prediction_result: float
+    confidence_score: Optional[float] = None
+    model_version: Optional[str] = None
+    prediction_type: str
+    prediction_date: datetime
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class AIModelMetadataBase(BaseModel):
+    model_name: str
+    model_version: str
+    description: Optional[str] = None
+    accuracy: Optional[float] = None
+    training_date: Optional[datetime] = None
+    parameters: Optional[dict] = None
+
+class AIModelMetadataCreate(AIModelMetadataBase):
+    pass
+
+class AIModelMetadataResponse(AIModelMetadataBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

@@ -1,12 +1,12 @@
 // components/Login.js
 import React, { useState } from 'react';
 import { Form, Input, Button, message, Typography } from 'antd';
-import { UserOutlined, LockOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../utils/api';
 import './Login.css';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
@@ -50,8 +50,11 @@ const Login = () => {
     <div className="login-container">
       <div className="login-content">
         <div className="login-header">
-          <Title level={2} className="login-title">Login</Title>
-          <Text className="login-subtitle">Welcome back! Please login to your account</Text>
+          <div className="login-logo">
+            <EnvironmentOutlined style={{ fontSize: '44px', color: '#2ecc71' }} />
+          </div>
+          <Title level={2} className="login-title">Welcome Back</Title>
+          <Text className="login-subtitle">Sign in to your Carbon Footprint Tracker account</Text>
         </div>
         
         <div className="login-card">
@@ -64,6 +67,7 @@ const Login = () => {
           >
             <Form.Item
               name="email"
+              label="Email Address"
               validateTrigger="onBlur"
               rules={[
                 { required: true, message: 'Please enter your email' },
@@ -72,7 +76,7 @@ const Login = () => {
             >
               <Input 
                 prefix={<UserOutlined />} 
-                placeholder="Email"
+                placeholder="Enter your email"
                 autoComplete="email"
                 disabled={loading}
               />
@@ -80,6 +84,7 @@ const Login = () => {
 
             <Form.Item
               name="password"
+              label="Password"
               validateTrigger="onBlur"
               rules={[
                 { required: true, message: 'Please enter your password' },
@@ -88,11 +93,17 @@ const Login = () => {
             >
               <Input.Password
                 prefix={<LockOutlined />}
-                placeholder="Password"
+                placeholder="Enter your password"
                 autoComplete="current-password"
                 disabled={loading}
               />
             </Form.Item>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+              <Link to="/forgot-password" className="forgot-password-link">
+                Forgot password?
+              </Link>
+            </div>
 
             <Form.Item>
               <Button 
@@ -102,15 +113,30 @@ const Login = () => {
                 block
                 disabled={loading}
               >
-                {loading ? 'Logging in...' : 'Login'}
+                {loading ? 'Signing in...' : 'Sign In'}
               </Button>
             </Form.Item>
           </Form>
 
-          <div className="auth-links">
-            <Text>Don't have an account?</Text>
-            <Link to="/signup" style={{ pointerEvents: loading ? 'none' : 'auto' }}>Sign up</Link>
+          <div className="form-divider">
+            <span>OR</span>
           </div>
+
+          <Paragraph style={{ textAlign: 'center', marginBottom: '24px' }}>
+            Don't have an account yet?
+          </Paragraph>
+
+          <Link to="/signup">
+            <Button block size="large" className="signup-button">
+              Create Account
+            </Button>
+          </Link>
+        </div>
+
+        <div className="login-footer">
+          <Text type="secondary">
+            &copy; {new Date().getFullYear()} Carbon Footprint Tracker. All rights reserved.
+          </Text>
         </div>
       </div>
     </div>

@@ -165,7 +165,8 @@ def seed_database():
         # Import here to avoid potential circular imports
         from app.database import SessionLocal, test_db_connection
         from app.models import User, Company, Supplier, EmissionData, SupplyChain, Material
-        from app.models import MaterialType, TransportationType
+        # Import enum types from schemas instead of models
+        from app.schemas import MaterialType, TransportationType
         
         # Test database connection
         if not test_db_connection():

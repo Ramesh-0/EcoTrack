@@ -29,14 +29,25 @@ def get_password_hash(password):
     """Hash a password"""
     return pwd_context.hash(password)
 
-def authenticate_user(db, username: str, password: str):
-    """Authenticate a user"""
-    users = db.query(User).filter(User.username == username).all()
-    user = users[0] if users else None
+def authenticate_user(db, username_or_email: str, password: str):
+    """Authenticate a user by username or email"""
+    # Try to find the user by username
+    user = db.query(User).filter(User.username == username_or_email).first()
+    
+    # If not found by username, try email
+    if not user:
+        user = db.query(User).filter(User.email == username_or_email).first()
+    
+    # If still not found or password doesn't match, return False
     if not user:
         return False
     if not verify_password(password, user.hashed_password):
         return False
+    
+    # Check if user is active
+    if not user.is_active:
+        return False
+        
     return user
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):

@@ -193,3 +193,120 @@ def delete_supply_chain(db: Session, supply_chain_id: int, user_id: int):
         db.rollback()
         logger.error(f"Error deleting supply chain: {str(e)}")
         raise
+
+def create_user(db: Session, user_data: schemas.UserCreate):
+    """Create a new user"""
+    try:
+        # Check if user with same email or username exists
+        existing_user = db.query(models.User).filter(
+            (models.User.email == user_data.email) | 
+            (models.User.username == user_data.username)
+        ).first()
+        
+        if existing_user:
+            if existing_user.email == user_data.email:
+                raise ValueError(f"Email {user_data.email} is already registered")
+            else:
+                raise ValueError(f"Username {user_data.username} is already taken")
+
+        # Check if passwords match
+        if user_data.password != user_data.confirm_password:
+            raise ValueError("Passwords do not match")
+            
+        # Create new user
+        new_user = models.User(
+            username=user_data.username,
+            email=user_data.email,
+            is_active=True,
+            is_superuser=False
+        )
+        
+        # Set password hash
+        new_user.set_password(user_data.password)
+        
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return new_user
+        
+    except ValueError as e:
+        db.rollback()
+        raise e
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating user: {str(e)}")
+        raise
+
+def get_user(db: Session, user_id: int):
+    """Get a user by ID"""
+    return db.query(models.User).filter(models.User.id == user_id).first()
+
+def get_user_by_email(db: Session, email: str):
+    """Get a user by email"""
+    return db.query(models.User).filter(models.User.email == email).first()
+
+def get_user_by_username(db: Session, username: str):
+    """Get a user by username"""
+    return db.query(models.User).filter(models.User.username == username).first()
+
+def get_users(db: Session, skip: int = 0, limit: int = 10):
+    """Get all users with pagination"""
+    return db.query(models.User).offset(skip).limit(limit).all()
+
+def update_user(db: Session, user_id: int, user_data: schemas.UserUpdate, current_user_id: int):
+    """Update a user"""
+    try:
+        # Check if user exists and is the current user or an admin
+        db_user = get_user(db, user_id)
+        if not db_user:
+            raise ValueError(f"User with ID {user_id} not found")
+            
+        if user_id != current_user_id:
+            current_user = get_user(db, current_user_id)
+            if not current_user or current_user.role != models.ROLE_ADMIN:
+                raise ValueError("You can only update your own profile")
+        
+        # Update username if provided and not already taken
+        if user_data.username and user_data.username != db_user.username:
+            existing_user = get_user_by_username(db, user_data.username)
+            if existing_user and existing_user.id != user_id:
+                raise ValueError(f"Username {user_data.username} is already taken")
+            db_user.username = user_data.username
+        
+        # Update email if provided and not already taken
+        if user_data.email and user_data.email != db_user.email:
+            existing_user = get_user_by_email(db, user_data.email)
+            if existing_user and existing_user.id != user_id:
+                raise ValueError(f"Email {user_data.email} is already registered")
+            db_user.email = user_data.email
+        
+        # Update password if provided
+        if user_data.current_password and user_data.new_password:
+            # Import verify_password from auth
+            from app.auth import verify_password
+            
+            # Verify current password
+            if not verify_password(user_data.current_password, db_user.hashed_password):
+                raise ValueError("Current password is incorrect")
+                
+            # Check if new password and confirm password match
+            if user_data.new_password != user_data.confirm_new_password:
+                raise ValueError("New passwords do not match")
+                
+            # Set new password
+            db_user.set_password(user_data.new_password)
+        
+        # Update timestamp
+        db_user.updated_at = datetime.utcnow()
+        
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+        
+    except ValueError as e:
+        db.rollback()
+        raise e
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating user: {str(e)}")
+        raise

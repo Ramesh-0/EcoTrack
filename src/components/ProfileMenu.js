@@ -1,8 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import './ProfileMenu.css';
 
-const ProfileMenu = ({ isOpen, onClose }) => {
+const ProfileMenu = ({ isOpen, onClose, user }) => {
   const menuRef = useRef(null);
   const [avatar, setAvatar] = useState('https://via.placeholder.com/100');
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -28,8 +31,13 @@ const ProfileMenu = ({ isOpen, onClose }) => {
   };
 
   const handleLogout = () => {
-    // Add your logout logic here
+    // Remove user data and token from localStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    // Close the menu
     onClose();
+    // Redirect to login page
+    navigate('/login');
   };
 
   if (!isOpen) return null;
@@ -50,8 +58,9 @@ const ProfileMenu = ({ isOpen, onClose }) => {
               />
             </label>
           </div>
-          <h3>John Doe</h3>
-          <p>john.doe@example.com</p>
+          <h3>{user.username || 'User'}</h3>
+          <p>{user.email || 'No email provided'}</p>
+          {user.company_name && <p className="company-name">{user.company_name}</p>}
         </div>
         
         <div className="profile-menu-items">

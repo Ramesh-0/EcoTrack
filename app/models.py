@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text, Boolean
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -16,19 +16,28 @@ class User(Base):
     hashed_password = Column(String(100))
     role = Column(String(20), default=ROLE_USER)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
+    is_active = Column(Boolean, default=True)
+    is_superuser = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     company = relationship("Company", back_populates="users")
-    emissions_data = relationship("EmissionsData", back_populates="user")
+    emissions_data = relationship("EmissionData", back_populates="user")
+    ai_predictions = relationship("AIPrediction", back_populates="user")
 
-    def __init__(self, username=None, email=None, hashed_password=None, role=ROLE_USER, company_id=None):
+    def __init__(self, username=None, email=None, role=ROLE_USER, company_id=None, is_active=True, is_superuser=False):
         self.username = username
         self.email = email
-        self.hashed_password = hashed_password
         self.role = role
         self.company_id = company_id
+        self.is_active = is_active
+        self.is_superuser = is_superuser
+
+    def set_password(self, password):
+        # Import here to avoid circular import
+        from app.auth import get_password_hash
+        self.hashed_password = get_password_hash(password)
 
 class Company(Base):
     __tablename__ = "companies"
@@ -45,8 +54,9 @@ class Company(Base):
     # Relationships
     users = relationship("User", back_populates="company")
     suppliers = relationship("Supplier", back_populates="company")
-    emissions_data = relationship("EmissionsData", back_populates="company")
+    emissions_data = relationship("EmissionData", back_populates="company")
     supply_chains = relationship("SupplyChain", back_populates="company")
+    ai_predictions = relationship("AIPrediction", back_populates="company")
 
     def __init__(self, name=None, description=None, industry=None, location=None, size=None):
         self.name = name
@@ -69,7 +79,7 @@ class Supplier(Base):
     
     # Relationships
     company = relationship("Company", back_populates="suppliers")
-    emissions_data = relationship("EmissionsData", back_populates="supplier")
+    emissions_data = relationship("EmissionData", back_populates="supplier")
     supply_chains = relationship("SupplyChain", back_populates="supplier")
 
     def __init__(self, name=None, description=None, contact_info=None, location=None, company_id=None):
@@ -79,7 +89,7 @@ class Supplier(Base):
         self.location = location
         self.company_id = company_id
 
-class EmissionsData(Base):
+class EmissionData(Base):
     __tablename__ = "emissions_data"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -95,13 +105,22 @@ class EmissionsData(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # For compatibility with the startup script
+    date = Column(DateTime, default=datetime.utcnow)
+    type = Column(String(50), nullable=True)
+    amount = Column(Float, nullable=True)
+    co2_per_unit = Column(Float, nullable=True)
+    unit = Column(String(20), nullable=True)
+    description = Column(Text, nullable=True)
+    
     # Relationships
     company = relationship("Company", back_populates="emissions_data")
     supplier = relationship("Supplier", back_populates="emissions_data")
     user = relationship("User", back_populates="emissions_data")
 
     def __init__(self, company_id=None, supplier_id=None, user_id=None, scope=None, category=None, 
-                 emission_value=None, emission_unit=None, reporting_period=None, data_quality=None):
+                 emission_value=None, emission_unit=None, reporting_period=None, data_quality=None,
+                 date=None, type=None, amount=None, co2_per_unit=None, unit=None, description=None):
         self.company_id = company_id
         self.supplier_id = supplier_id
         self.user_id = user_id
@@ -111,6 +130,12 @@ class EmissionsData(Base):
         self.emission_unit = emission_unit
         self.reporting_period = reporting_period
         self.data_quality = data_quality
+        self.date = date or datetime.utcnow()
+        self.type = type
+        self.amount = amount
+        self.co2_per_unit = co2_per_unit
+        self.unit = unit
+        self.description = description
 
 class SupplyChain(Base):
     __tablename__ = "supply_chains"
@@ -159,3 +184,54 @@ class Material(Base):
         self.category = category
         self.emission_factor = emission_factor
         self.emission_unit = emission_unit
+
+class AIPrediction(Base):
+    __tablename__ = "ai_predictions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    input_data = Column(Text, nullable=False)
+    prediction_result = Column(Float, nullable=False)
+    confidence_score = Column(Float, nullable=True)
+    model_version = Column(String(50), nullable=True)
+    prediction_type = Column(String(50), nullable=False)  # e.g., "scope1", "scope2", "scope3", "total"
+    prediction_date = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    company = relationship("Company", back_populates="ai_predictions")
+    user = relationship("User", back_populates="ai_predictions")
+
+    def __init__(self, company_id=None, user_id=None, input_data=None, prediction_result=None, 
+                 confidence_score=None, model_version=None, prediction_type=None):
+        self.company_id = company_id
+        self.user_id = user_id
+        self.input_data = input_data
+        self.prediction_result = prediction_result
+        self.confidence_score = confidence_score
+        self.model_version = model_version
+        self.prediction_type = prediction_type
+
+class AIModelMetadata(Base):
+    __tablename__ = "ai_model_metadata"
+
+    id = Column(Integer, primary_key=True, index=True)
+    model_name = Column(String(100), nullable=False)
+    model_version = Column(String(50), nullable=False)
+    description = Column(Text, nullable=True)
+    accuracy = Column(Float, nullable=True)
+    training_date = Column(DateTime, nullable=True)
+    parameters = Column(Text, nullable=True)  # JSON encoded parameters
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __init__(self, model_name=None, model_version=None, description=None, 
+                 accuracy=None, training_date=None, parameters=None):
+        self.model_name = model_name
+        self.model_version = model_version
+        self.description = description
+        self.accuracy = accuracy
+        self.training_date = training_date
+        self.parameters = parameters
