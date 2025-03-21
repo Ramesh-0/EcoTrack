@@ -9,16 +9,23 @@ from app.auth import (
     create_access_token,
     ACCESS_TOKEN_EXPIRE_MINUTES,
     get_current_active_user,
-    get_current_user
+    get_current_user,
+    get_password_hash
 )
 from datetime import timedelta, datetime
 import logging
 import traceback
 from typing import List, Optional
 import random
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+import json
+import os
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 logger = logging.getLogger(__name__)
 
 # Create FastAPI app instance
@@ -187,45 +194,20 @@ def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
             detail=f"Error creating user: {str(e)}"
         )
 
-@app.post("/auth/login", response_model=schemas.Token)
-async def login(user_credentials: schemas.UserLogin, db: Session = Depends(get_db)):
-    try:
-        user = await authenticate_user(db, user_credentials.email, user_credentials.password)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={"sub": user.email}, expires_delta=access_token_expires
-        )
-        
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user": {
-                "id": user.id,
-                "username": user.username,
-                "email": user.email,
-                "is_active": user.is_active,
-                "is_superuser": user.is_superuser,
-                "company_id": user.company_id,
-                "created_at": user.created_at
-            },
-            "redirect_url": "/dashboard"
-        }
-        
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        logger.error(f"Error in login: {str(e)}\n{traceback.format_exc()}")
+@app.post("/token", response_model=schemas.Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db = Depends(get_db)):
+    user = authenticate_user(db, form_data.username, form_data.password)
+    if not user:
         raise HTTPException(
-            status_code=500,
-            detail=f"Error during login: {str(e)}"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
         )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/dashboard", response_model=schemas.DashboardResponse)
 async def get_dashboard(current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):

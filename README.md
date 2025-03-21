@@ -1,70 +1,151 @@
-# Getting Started with Create React App
+# AI Carbon Footprint Tracker
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This project is a comprehensive application for tracking and managing carbon footprint data, allowing companies to monitor their emissions and make data-driven sustainability decisions.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- User authentication and authorization
+- Company and supplier management
+- Carbon emissions data tracking
+- Supply chain emissions monitoring
+- Material emissions calculation
+- Analytics and dashboard visualization
 
-### `npm start`
+## Tech Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Backend**: FastAPI with SQLAlchemy
+- **Database**: SQLite (default), PostgreSQL (optional)
+- **Frontend**: React.js
+- **Authentication**: JWT tokens
+- **Migration**: Alembic
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Installation and Setup
 
-### `npm test`
+### Prerequisites
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- Python 3.8+
+- Node.js 14+
+- npm/yarn
 
-### `npm run build`
+### Backend Setup
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. Clone the repository:
+   ```
+   git clone <repository-url>
+   cd ai-carbon-footprint-tracker
+   ```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+2. Create and activate a virtual environment:
+   ```
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+3. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
 
-### `npm run eject`
+4. Set up environment variables by creating a `.env` file:
+   ```
+   # Database configuration
+   DATABASE_URL=sqlite:///./carbon_footprint.db
+   
+   # JWT Settings for authentication
+   SECRET_KEY=your_secure_secret_key
+   ALGORITHM=HS256
+   ACCESS_TOKEN_EXPIRE_MINUTES=30
+   
+   # Application settings
+   DEBUG=True
+   ENVIRONMENT=development
+   ```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+5. Initialize the database with Alembic:
+   ```
+   # Generate initial migration
+   python generate_migration.py
+   
+   # Apply migrations
+   python upgrade_db.py
+   
+   # Seed initial data
+   python init_db.py
+   ```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Frontend Setup
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+1. Install frontend dependencies:
+   ```
+   npm install
+   ```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+2. Start the frontend development server:
+   ```
+   npm start
+   ```
 
-## Learn More
+## Running the Application
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Start the Backend
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```
+uvicorn app.main:app --reload
+```
 
-### Code Splitting
+The API will be available at http://localhost:8000.
+API documentation will be available at http://localhost:8000/docs.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### Start the Frontend
 
-### Analyzing the Bundle Size
+```
+npm start
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+The frontend will be available at http://localhost:3000.
 
-### Making a Progressive Web App
+## Database Management
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### Create a New Migration
 
-### Advanced Configuration
+After changing models:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+```
+python generate_migration.py
+```
 
-### Deployment
+### Apply Migrations
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+```
+python upgrade_db.py
+```
 
-### `npm run build` fails to minify
+## Docker Deployment
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+1. Build and run with Docker Compose:
+   ```
+   docker-compose up -d
+   ```
+
+2. For production deployment, use:
+   ```
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
+
+## API Documentation
+
+Once the server is running, you can access the interactive API documentation at:
+
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+## Development Guidelines
+
+- Follow PEP 8 style guide for Python code
+- Use React hooks and functional components for frontend
+- Write tests for all new features
+- Use migrations for all database changes
+
+## License
+
+[Your license information here]

@@ -1,100 +1,34 @@
 // components/Sidebar.js
 import React from 'react';
-import { Layout, Menu, Button, Typography } from 'antd';
-import { useNavigate, useLocation } from 'react-router-dom';
-import {
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  DashboardOutlined,
-  BarChartOutlined,
-  TeamOutlined,
-  ShoppingOutlined,
-  LogoutOutlined,
-  LineChartOutlined,
-  CloudOutlined
-} from '@ant-design/icons';
+import { Link, useLocation } from 'react-router-dom';
 
-const { Sider } = Layout;
-const { Text } = Typography;
-
-const Sidebar = ({ collapsed, setCollapsed }) => {
-  const navigate = useNavigate();
+const Sidebar = () => {
   const location = useLocation();
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/login');
-  };
-
   const menuItems = [
-    {
-      key: '/dashboard',
-      icon: <DashboardOutlined />,
-      label: 'Dashboard',
-    },
-    {
-      key: '/analytics',
-      icon: <LineChartOutlined />,
-      label: 'Analytics',
-    },
-    {
-      key: '/suppliers',
-      icon: <TeamOutlined />,
-      label: 'Suppliers',
-    },
-    {
-      key: '/supply-chain',
-      icon: <ShoppingOutlined />,
-      label: 'Supply Chain',
-    },
-    {
-      key: '/emissions',
-      icon: <CloudOutlined />,
-      label: 'Emissions',
-    }
+    { path: '/', icon: 'fas fa-chart-line', label: 'Dashboard' },
+    { path: '/analytics', icon: 'fas fa-chart-bar', label: 'Analytics' },
+    { path: '/carbon-tracker', icon: 'fas fa-leaf', label: 'Carbon Tracker' },
+    { path: '/supply-chain', icon: 'fas fa-truck', label: 'Supply Chain' },
+    { path: '/esg-reports', icon: 'fas fa-file-alt', label: 'Emission Reports' }
   ];
 
   return (
-    <Sider 
-      trigger={null} 
-      collapsible 
-      collapsed={collapsed}
-      width={250}
-      className="sidebar"
-    >
-      <div className="logo">
-        <h1>
-          {collapsed ? 'CFT' : 'Carbon Footprint'}
-        </h1>
-      </div>
-      <Menu
-        theme="light"
-        mode="inline"
-        selectedKeys={[location.pathname]}
-        items={menuItems}
-        onClick={({ key }) => navigate(key)}
-      />
-      <div className="sidebar-footer">
-        <Button
-          type="text"
-          icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-          onClick={() => setCollapsed(!collapsed)}
-          className="collapse-btn"
-        >
-          {!collapsed && 'Collapse'}
-        </Button>
-        <Button
-          type="text"
-          icon={<LogoutOutlined />}
-          onClick={handleLogout}
-          className="logout-btn"
-          danger
-        >
-          {!collapsed && 'Logout'}
-        </Button>
-      </div>
-    </Sider>
+    <nav className="sidebar">
+      <ul className="sidebar-menu">
+        {menuItems.map((item) => (
+          <li key={item.path}>
+            <Link
+              to={item.path}
+              className={`sidebar-item ${location.pathname === item.path ? 'active' : ''}`}
+            >
+              <i className={item.icon}></i>
+              <span>{item.label}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 };
 

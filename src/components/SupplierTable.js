@@ -1,44 +1,11 @@
 // components/SupplierTable.js
 import React, { useState, useEffect } from 'react';
-import { Table, Progress, Empty } from 'antd';
 import api from '../api/axios';
 
 const SupplierTable = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [supplierData, setSupplierData] = useState([]);
-
-  const columns = [
-    {
-      title: 'Name',
-      dataIndex: 'name',
-      key: 'name',
-      sorter: (a, b) => (a.name || '').localeCompare(b.name || '')
-    },
-    {
-      title: 'Location',
-      dataIndex: 'location',
-      key: 'location',
-      sorter: (a, b) => (a.location || '').localeCompare(b.location || '')
-    },
-    {
-      title: 'Sustainability Score',
-      dataIndex: 'emission_ratings',
-      key: 'emission_ratings',
-      sorter: (a, b) => (Number(a.emission_ratings) || 0) - (Number(b.emission_ratings) || 0),
-      render: (score) => {
-        const numScore = Number(score) || 0;
-        return (
-          <Progress
-            percent={numScore}
-            size="small"
-            status={numScore < 50 ? 'exception' : 'active'}
-            strokeColor={numScore < 50 ? '#ff4d4f' : numScore < 80 ? '#faad14' : '#52c41a'}
-          />
-        );
-      }
-    }
-  ];
 
   useEffect(() => {
     const fetchSuppliers = async () => {
@@ -72,36 +39,60 @@ const SupplierTable = () => {
     fetchSuppliers();
   }, []);
 
+  if (loading) {
+    return <div className="loading-text">Loading suppliers...</div>;
+  }
+
+  if (error) {
+    return <div className="error-message">{error}</div>;
+  }
+
   return (
-    <div style={{ padding: '24px' }}>
-      <Table
-        dataSource={supplierData}
-        columns={columns}
-        loading={loading}
-        pagination={{
-          defaultPageSize: 10,
-          showSizeChanger: true,
-          showTotal: (total) => `Total ${total} ${total === 1 ? 'supplier' : 'suppliers'}`
-        }}
-        locale={{
-          emptyText: error ? (
-            <Empty 
-              description={
-                <span>
-                  {error}
-                  <br />
-                  <a onClick={(e) => { e.preventDefault(); window.location.reload(); }}>
-                    Click to retry
-                  </a>
-                </span>
-              }
-            />
-          ) : (
-            <Empty description="No suppliers found" />
-          )
-        }}
-        scroll={{ x: true }}
-      />
+    <div className="supplier-table-container">
+      <table className="supplier-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Location</th>
+            <th>Sustainability Score</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {supplierData.map((supplier) => (
+            <tr key={supplier.key}>
+              <td>{supplier.name}</td>
+              <td>{supplier.location}</td>
+              <td>
+                <div className="score-container">
+                  <div className="score-bar-container">
+                    <div 
+                      className="score-bar" 
+                      style={{ 
+                        width: `${supplier.emission_ratings}%`,
+                        backgroundColor: supplier.emission_ratings < 50 ? 'var(--error-color)' : 
+                                       supplier.emission_ratings < 80 ? 'var(--warning-color)' : 
+                                       'var(--success-color)'
+                      }}
+                    />
+                  </div>
+                  <span className="score-value">{supplier.emission_ratings}%</span>
+                </div>
+              </td>
+              <td>
+                <button className="view-btn">View Details</button>
+              </td>
+            </tr>
+          ))}
+          {supplierData.length === 0 && (
+            <tr>
+              <td colSpan="4" className="empty-state">
+                No suppliers found
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 };
