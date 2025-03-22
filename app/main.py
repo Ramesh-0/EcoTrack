@@ -468,6 +468,67 @@ async def delete_supply_chain(
             detail=f"Error deleting supply chain: {str(e)}"
         )
 
+@app.post("/emissions", response_model=schemas.EmissionDataResponse)
+async def create_emissions_data(
+    emission_data: schemas.EmissionsDataCreate,
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Create new emissions data entry.
+    This endpoint requires authentication.
+    """
+    logger.debug(f"Emissions data submission by user: {current_user.username}")
+    try:
+        # Create a new emission data record
+        db_emission_data = models.EmissionData(
+            user_id=current_user.id,
+            date=emission_data.date,
+            type=emission_data.type,
+            amount=emission_data.amount,
+            co2_per_unit=emission_data.co2_per_unit,
+            unit=emission_data.unit,
+            description=emission_data.description
+        )
+        
+        db.add(db_emission_data)
+        db.commit()
+        db.refresh(db_emission_data)
+        
+        return db_emission_data
+    except Exception as e:
+        logger.error(f"Error creating emissions data: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error creating emissions data: {str(e)}"
+        )
+
+@app.get("/emissions", response_model=List[schemas.EmissionDataResponse])
+async def get_emissions_data(
+    skip: int = 0,
+    limit: int = 100,
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get user's emissions data entries.
+    This endpoint requires authentication.
+    """
+    logger.debug(f"Fetching emissions data for user: {current_user.username}")
+    try:
+        # Query emissions data for the current user
+        emissions_data = db.query(models.EmissionData).filter(
+            models.EmissionData.user_id == current_user.id
+        ).offset(skip).limit(limit).all()
+        
+        return emissions_data
+    except Exception as e:
+        logger.error(f"Error fetching emissions data: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching emissions data: {str(e)}"
+        )
+
 @app.get("/emissions/analytics", response_model=schemas.EmissionsAnalyticsResponse)
 async def get_emissions_analytics(
     start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),

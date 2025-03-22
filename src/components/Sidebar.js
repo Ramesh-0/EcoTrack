@@ -8,6 +8,8 @@ const Sidebar = () => {
   const menuItems = [
     { path: '/', icon: 'fas fa-chart-line', label: 'Dashboard' },
     { path: '/analytics', icon: 'fas fa-chart-bar', label: 'Analytics' },
+    { path: '/emissions', icon: 'fas fa-cloud', label: 'Emission Calculator' },
+    { path: '/emissions-calculator', icon: 'fas fa-calculator', label: 'Advanced Calculator' },
     { path: '/carbon-tracker', icon: 'fas fa-leaf', label: 'Carbon Tracker' },
     { path: '/supply-chain', icon: 'fas fa-truck', label: 'Supply Chain' },
     { path: '/esg-reports', icon: 'fas fa-file-alt', label: 'Emission Reports' }

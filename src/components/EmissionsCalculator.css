@@ -1,0 +1,90 @@
+.emissions-calculator {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.emissions-calculator .ant-card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.emissions-calculator .ant-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.emissions-calculator .ant-card-head {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.emissions-calculator .ant-form-item-label > label {
+  font-weight: 500;
+}
+
+.emissions-calculator .ant-select-selector,
+.emissions-calculator .ant-input,
+.emissions-calculator .ant-input-number,
+.emissions-calculator .ant-picker {
+  border-radius: 6px;
+}
+
+.emissions-calculator .ant-btn {
+  border-radius: 6px;
+  transition: all 0.3s;
+}
+
+.emissions-calculator .ant-btn-primary {
+  background-color: #52c41a;
+  border-color: #52c41a;
+}
+
+.emissions-calculator .ant-btn-primary:hover {
+  background-color: #5ddc1a;
+  border-color: #5ddc1a;
+  transform: translateY(-1px);
+}
+
+.emissions-calculator .column-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Results card styling */
+.emissions-calculator .ant-card {
+  margin-bottom: 16px;
+}
+
+.emissions-calculator .ant-divider {
+  margin: 24px 0;
+}
+
+/* Animation for calculated result */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.emissions-calculator .ant-card {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+/* Responsive styling */
+@media (max-width: 768px) {
+  .emissions-calculator {
+    padding: 10px;
+  }
+} 

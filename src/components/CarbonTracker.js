@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { saveActivities, getActivities, getStats } from '../utils/carbonTrackerStorage';
 
 const CarbonTracker = () => {
   const [activities, setActivities] = useState([]);
@@ -77,73 +78,67 @@ const CarbonTracker = () => {
       date: '2023-10-20',
       category: 'scope3',
       emissions: 67.2 // 120 * 0.56
+    },
+    {
+      id: 5,
+      type: 'electricity',
+      description: 'Data Center Power',
+      amount: 5000,
+      unit: 'kWh',
+      date: '2023-11-05',
+      category: 'scope2',
+      emissions: 2100 // 5000 * 0.42
+    },
+    {
+      id: 6,
+      type: 'transportation',
+      description: 'Employee Commute',
+      amount: 2000,
+      unit: 'km',
+      date: '2023-11-10',
+      category: 'scope3',
+      emissions: 320 // 2000 * 0.16
+    },
+    {
+      id: 7,
+      type: 'refrigerants',
+      description: 'HVAC System',
+      amount: 2,
+      unit: 'kg',
+      date: '2023-11-15',
+      category: 'scope1',
+      emissions: 3600 // 2 * 1800
     }
   ];
 
   useEffect(() => {
-    // Load sample activities
-    setActivities(sampleActivities);
+    // First check if we have saved activities
+    const savedActivities = getActivities();
+    
+    if (savedActivities && savedActivities.length > 0) {
+      setActivities(savedActivities);
+    } else {
+      // Load sample activities if no saved activities found
+      setActivities(sampleActivities);
+      
+      // Save the sample activities to localStorage
+      saveActivities(sampleActivities);
+    }
   }, []);
 
   useEffect(() => {
     // Calculate statistics when activities change
     calculateStats();
+    
+    // Save activities to localStorage whenever they change
+    if (activities.length > 0) {
+      saveActivities(activities);
+    }
   }, [activities]);
 
   const calculateStats = () => {
-    const totalEmissions = activities.reduce((sum, activity) => sum + activity.emissions, 0);
-    
-    const scope1 = activities
-      .filter(activity => activity.category === 'scope1')
-      .reduce((sum, activity) => sum + activity.emissions, 0);
-    
-    const scope2 = activities
-      .filter(activity => activity.category === 'scope2')
-      .reduce((sum, activity) => sum + activity.emissions, 0);
-    
-    const scope3 = activities
-      .filter(activity => activity.category === 'scope3')
-      .reduce((sum, activity) => sum + activity.emissions, 0);
-    
-    // Calculate this month's emissions
-    const today = new Date();
-    const thisMonth = today.getMonth();
-    const thisYear = today.getFullYear();
-    
-    const thisMonthEmissions = activities
-      .filter(activity => {
-        const activityDate = new Date(activity.date);
-        return activityDate.getMonth() === thisMonth && activityDate.getFullYear() === thisYear;
-      })
-      .reduce((sum, activity) => sum + activity.emissions, 0);
-    
-    // Calculate last month's emissions
-    const lastMonthDate = new Date();
-    lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
-    const lastMonth = lastMonthDate.getMonth();
-    const lastMonthYear = lastMonthDate.getFullYear();
-    
-    const lastMonthEmissions = activities
-      .filter(activity => {
-        const activityDate = new Date(activity.date);
-        return activityDate.getMonth() === lastMonth && activityDate.getFullYear() === lastMonthYear;
-      })
-      .reduce((sum, activity) => sum + activity.emissions, 0);
-    
-    // Calculate trend (% change)
-    const trend = lastMonthEmissions > 0 
-      ? ((thisMonthEmissions - lastMonthEmissions) / lastMonthEmissions) * 100 
-      : 0;
-    
-    setStats({
-      totalEmissions,
-      scope1,
-      scope2,
-      scope3,
-      lastMonth: lastMonthEmissions,
-      thisMonth: thisMonthEmissions,
-      trend
-    });
+    const calculatedStats = getStats();
+    setStats(calculatedStats);
   };
 
   const handleInputChange = (e) => {
@@ -177,7 +172,11 @@ const CarbonTracker = () => {
       emissions: emissions
     };
     
-    setActivities([...activities, activity]);
+    const updatedActivities = [...activities, activity];
+    setActivities(updatedActivities);
+    
+    // Save activities to localStorage
+    saveActivities(updatedActivities);
     
     // Reset form
     setNewActivity({
@@ -193,7 +192,11 @@ const CarbonTracker = () => {
   };
 
   const handleDeleteActivity = (id) => {
-    setActivities(activities.filter(activity => activity.id !== id));
+    const updatedActivities = activities.filter(activity => activity.id !== id);
+    setActivities(updatedActivities);
+    
+    // Save updated activities to localStorage
+    saveActivities(updatedActivities);
   };
 
   const filteredActivities = filter === 'all'

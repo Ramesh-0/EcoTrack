@@ -25,6 +25,7 @@ class User(Base):
     company = relationship("Company", back_populates="users")
     emissions_data = relationship("EmissionData", back_populates="user")
     ai_predictions = relationship("AIPrediction", back_populates="user")
+    supply_chains = relationship("SupplyChain", back_populates="user")
 
     def __init__(self, username=None, email=None, role=ROLE_USER, company_id=None, is_active=True, is_superuser=False):
         self.username = username
@@ -143,6 +144,7 @@ class SupplyChain(Base):
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
     supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     tier = Column(Integer, nullable=True)
     material_id = Column(Integer, ForeignKey("materials.id"), nullable=True)
     quantity = Column(Float, nullable=True)
@@ -154,14 +156,16 @@ class SupplyChain(Base):
     company = relationship("Company", back_populates="supply_chains")
     supplier = relationship("Supplier", back_populates="supply_chains")
     material = relationship("Material", back_populates="supply_chains")
+    user = relationship("User", back_populates="supply_chains")
 
-    def __init__(self, company_id=None, supplier_id=None, tier=None, material_id=None, quantity=None, unit=None):
+    def __init__(self, company_id=None, supplier_id=None, tier=None, material_id=None, quantity=None, unit=None, user_id=None):
         self.company_id = company_id
         self.supplier_id = supplier_id
         self.tier = tier
         self.material_id = material_id
         self.quantity = quantity
         self.unit = unit
+        self.user_id = user_id
 
 class Material(Base):
     __tablename__ = "materials"

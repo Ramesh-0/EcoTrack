@@ -8,6 +8,8 @@ import SupplyChain from './components/SupplyChain';
 import ESGReports from './components/ESGReports';
 import CarbonTracker from './components/CarbonTracker';
 import SupplyChainEmissionsDetail from './components/SupplyChainEmissionsDetail';
+import Emissions from './components/Emissions';
+import EmissionsCalculator from './components/EmissionsCalculator';
 import Login from './components/Login';
 import Signup from './components/Signup';
 import './App.css';
@@ -122,6 +124,34 @@ function App() {
                 <Sidebar />
                 <main className="main-content">
                   <SupplyChainEmissionsDetail />
+                </main>
+              </div>
+            </div>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/emissions" element={
+          <ProtectedRoute>
+            <div className="app">
+              <Header />
+              <div className="content-wrapper">
+                <Sidebar />
+                <main className="main-content">
+                  <Emissions />
+                </main>
+              </div>
+            </div>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/emissions-calculator" element={
+          <ProtectedRoute>
+            <div className="app">
+              <Header />
+              <div className="content-wrapper">
+                <Sidebar />
+                <main className="main-content">
+                  <EmissionsCalculator />
                 </main>
               </div>
             </div>

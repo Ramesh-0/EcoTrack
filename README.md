@@ -10,11 +10,12 @@ This project is a comprehensive application for tracking and managing carbon foo
 - Supply chain emissions monitoring
 - Material emissions calculation
 - Analytics and dashboard visualization
+- Database storage of emissions calculations 
 
 ## Tech Stack
 
-- **Backend**: FastAPI with SQLAlchemy
-- **Database**: SQLite (default), PostgreSQL (optional)
+- **Backend**: FastAPI with SQLAlchemy, Node.js/Express API
+- **Database**: SQLite (default), PostgreSQL (optional), MongoDB (for emissions storage)
 - **Frontend**: React.js
 - **Authentication**: JWT tokens
 - **Migration**: Alembic
@@ -26,6 +27,7 @@ This project is a comprehensive application for tracking and managing carbon foo
 - Python 3.8+
 - Node.js 14+
 - npm/yarn
+- MongoDB (for emissions storage)
 
 ### Backend Setup
 
@@ -59,6 +61,12 @@ This project is a comprehensive application for tracking and managing carbon foo
    # Application settings
    DEBUG=True
    ENVIRONMENT=development
+   
+   # AI Model Service
+   MODEL_API_URL=http://localhost:8001/predict
+   
+   # Climaq API for emissions calculations
+   REACT_APP_CLIMAQ_API_KEY=your_climaq_api_key_here
    ```
 
 5. Initialize the database with Alembic:
@@ -71,6 +79,31 @@ This project is a comprehensive application for tracking and managing carbon foo
    
    # Seed initial data
    python init_db.py
+   ```
+
+### MongoDB API Setup (for Emissions Storage)
+
+1. Navigate to the server directory:
+   ```
+   cd server
+   ```
+
+2. Install server dependencies:
+   ```
+   npm install
+   ```
+
+3. Create a `.env` file based on `.env.example`:
+   ```
+   NODE_ENV=development
+   PORT=5000
+   MONGO_URI=mongodb://localhost:27017/carbon-footprint
+   JWT_SECRET=your_jwt_secret
+   ```
+
+4. Start the MongoDB API server:
+   ```
+   npm run dev
    ```
 
 ### Frontend Setup
@@ -87,7 +120,7 @@ This project is a comprehensive application for tracking and managing carbon foo
 
 ## Running the Application
 
-### Start the Backend
+### Start the Main Backend
 
 ```
 uvicorn app.main:app --reload
@@ -95,6 +128,15 @@ uvicorn app.main:app --reload
 
 The API will be available at http://localhost:8000.
 API documentation will be available at http://localhost:8000/docs.
+
+### Start the MongoDB API
+
+```
+cd server
+npm run dev
+```
+
+The MongoDB API will be available at http://localhost:5000.
 
 ### Start the Frontend
 
@@ -106,7 +148,17 @@ The frontend will be available at http://localhost:3000.
 
 ## Database Management
 
-### Create a New Migration
+### MongoDB (Emissions Data)
+
+This application uses MongoDB to store emissions calculations. The MongoDB database includes:
+
+- User authentication data
+- Saved emissions calculations with detailed inputs and results
+- Calculation history per user
+
+### Main Database
+
+#### Create a New Migration
 
 After changing models:
 
@@ -114,7 +166,7 @@ After changing models:
 python generate_migration.py
 ```
 
-### Apply Migrations
+#### Apply Migrations
 
 ```
 python upgrade_db.py
@@ -138,6 +190,19 @@ Once the server is running, you can access the interactive API documentation at:
 
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
+
+## External Services
+
+### Climaq API for Emissions Calculation
+
+The application uses the Climaq API for accurate carbon emissions calculations. To set up:
+
+1. Register for an API key at the Climaq website (https://climaq.com)
+2. Add your API key to the `.env` file:
+   ```
+   REACT_APP_CLIMAQ_API_KEY=your_climaq_api_key_here
+   ```
+3. If using Create React App, restart the development server for changes to take effect
 
 ## Development Guidelines
 
